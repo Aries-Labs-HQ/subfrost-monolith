@@ -1,0 +1,10 @@
+# Secrets — the monolith signing key lives here. NEVER commit.
+.env
+*.key
+
+# Runtime state (settled-receipt store, audit log, lockfile)
+data/
+
+# Node
+node_modules/
+npm-debug.log*

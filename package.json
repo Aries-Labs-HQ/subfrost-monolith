@@ -1,0 +1,25 @@
+{
+  "name": "subfrost-monolith",
+  "version": "0.1.0",
+  "description": "SIGNET-ONLY simplified replica of the Subfrost unwrap-settlement signer: watches the metashrew unwrap view, matches receipt outpoints, and settles frBTC unwraps from a single-key P2TR wallet. NOT FROST, NOT mainnet-safe.",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "subfrost-monolith": "src/index.js"
+  },
+  "scripts": {
+    "test": "node --test test/",
+    "test:live": "LIVE=1 node --test test/",
+    "start": "node src/index.js run"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@noble/curves": "^2.2.0",
+    "@noble/hashes": "^2.2.0",
+    "@scure/base": "^2.2.0",
+    "@scure/btc-signer": "^2.2.0"
+  }
+}
