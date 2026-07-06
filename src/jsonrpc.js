@@ -12,8 +12,8 @@ export class RpcError extends Error {
   }
 }
 
-export function makeClient({ url, user = null, pass = null, timeoutMs = 30_000 }) {
-  const headers = { 'Content-Type': 'application/json' };
+export function makeClient({ url, user = null, pass = null, timeoutMs = 30_000, extraHeaders = {} }) {
+  const headers = { 'Content-Type': 'application/json', ...extraHeaders };
   if (user !== null) {
     headers.Authorization = 'Basic ' + Buffer.from(`${user}:${pass}`).toString('base64');
   }

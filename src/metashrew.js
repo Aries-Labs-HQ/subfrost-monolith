@@ -17,7 +17,10 @@ function hexToBytes(hex) {
 export class Metashrew {
   constructor(cfg) {
     this.cfg = cfg;
-    this.call = makeClient({ url: cfg.metashrewUrl });
+    this.call = makeClient({
+      url: cfg.metashrewUrl,
+      extraHeaders: cfg.subfrostApiKey ? { 'x-subfrost-api-key': cfg.subfrostApiKey } : {},
+    });
   }
 
   async height() {
