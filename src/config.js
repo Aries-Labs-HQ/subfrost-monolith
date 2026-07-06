@@ -1,25 +1,11 @@
 // Configuration: .env (secrets + overrides) merged over safe signet defaults.
 
 import fs from 'node:fs';
-import os from 'node:os';
 import path from 'node:path';
+// Shared signet RPC endpoint + Subfrost key handling (single swap knob).
+import { resolveSignetRpc } from 'alkanes-infra/signet-rpc';
 
 export const ENV_PATH = path.resolve(process.cwd(), '.env');
-
-// Verified at tip 2026-07-06 (rockshrew 312,009 ≈ bitcoind 312,011): Flex's
-// signet Alkanes RPC. Single swap knob SIGNET_RPC_URL; fall back to our local
-// index with:  export SIGNET_RPC_URL=http://127.0.0.1:8080
-export const DEFAULT_SIGNET_RPC_URL = 'https://signet.l.subfrost.io/v4/jsonrpc';
-
-// Subfrost's hosted RPC requires the x-subfrost-api-key header. Only ever send
-// the key to *.subfrost.io — never to a local/other endpoint.
-export function isSubfrostHost(url) {
-  try {
-    return new URL(url).hostname.endsWith('subfrost.io');
-  } catch {
-    return false;
-  }
-}
 
 export function parseEnvFile(text) {
   const out = {};
@@ -56,36 +42,25 @@ function boolOpt(v, fallback) {
   return v === '1' || v.toLowerCase() === 'true';
 }
 
-// The Subfrost API key can live in this process's env, in the monolith's own
-// .env, or in the shared ~/.subfrost.env. Prefer the first that is set.
-function resolveSubfrostApiKey(get) {
-  const direct = get('SUBFROST_API_KEY');
-  if (direct) return direct;
-  try {
-    const shared = path.join(os.homedir(), '.subfrost.env');
-    if (fs.existsSync(shared)) {
-      return parseEnvFile(fs.readFileSync(shared, 'utf8')).SUBFROST_API_KEY ?? null;
-    }
-  } catch {
-    // unreadable ~/.subfrost.env — treat as absent
-  }
-  return null;
-}
-
 export function loadConfig({ env = process.env } = {}) {
   const file = loadEnvFile();
   const get = (k) => env[k] ?? file[k];
 
-  // SIGNET_RPC_URL is the single swap knob (Flex's endpoint ⇄ local index).
-  // METASHREW_URL kept as a back-compat alias.
-  const metashrewUrl = get('SIGNET_RPC_URL') ?? get('METASHREW_URL') ?? DEFAULT_SIGNET_RPC_URL;
-  const subfrostApiKey = resolveSubfrostApiKey(get);
+  // SIGNET_RPC_URL is the single swap knob (Flex's endpoint ⇄ local index);
+  // METASHREW_URL kept as a back-compat alias. resolveSignetRpc attaches the
+  // Subfrost key ONLY for *.subfrost.io hosts (null otherwise). The `get`
+  // getter lets it see the monolith's own .env in addition to process.env and
+  // the shared ~/.subfrost.env.
+  const { url: metashrewUrl, apiKey: subfrostApiKey } = resolveSignetRpc({
+    get,
+    aliases: ['METASHREW_URL'],
+  });
 
   const cfg = {
     // endpoints
     metashrewUrl,
     // only attached when the read endpoint is a Subfrost host
-    subfrostApiKey: isSubfrostHost(metashrewUrl) ? subfrostApiKey : null,
+    subfrostApiKey,
     bitcoindUrl: get('BITCOIND_URL') ?? 'http://127.0.0.1:38332',
     bitcoindUser: get('BITCOIND_USER') ?? 'bitcoinrpc',
     bitcoindPass: get('BITCOIND_PASS') ?? 'bitcoinrpc',
