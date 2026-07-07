@@ -18,9 +18,11 @@
 //      and check its structure: it carries a runestone OP_RETURN and the
 //      payout destination script is one of its own outputs (the unwrap
 //      pointer output), and the receipt vout matches what gettxout returned.
-//   4. The receipt outpoint's scriptPubKey should pay the frBTC signer key
-//      (OP_1 <get_signer x-only>). Warn-only by default (REQUIRE_SIGNER_MATCH
-//      hardens it) because signer rotation would strand old receipts.
+//   4. The receipt outpoint's scriptPubKey should pay the frBTC signer key:
+//      OP_1 <BIP341-tweaked output key> derived from get_signer's x-only
+//      INTERNAL key (see p2trOutputKeyScript — the raw key is NOT the output
+//      key). Warn-only by default (REQUIRE_SIGNER_MATCH hardens it) because
+//      signer rotation would strand old receipts.
 
 import { classifyScript, dustThreshold, isStandardPayable, outpointKey } from './btcodec.js';
 

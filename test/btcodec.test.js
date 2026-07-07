@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import * as btc from '@scure/btc-signer';
 import {
   decodeTxOut,
   classifyScript,
@@ -35,9 +36,19 @@ test('standard payable + dust thresholds', () => {
   assert.equal(dustThreshold(P2WPKH_SCRIPT), 294n);
 });
 
-test('p2trOutputKeyScript builds OP_1 <32B>', () => {
-  const script = p2trOutputKeyScript('07'.repeat(32));
-  assert.deepEqual([...script], [...P2TR_SCRIPT]);
+test('p2trOutputKeyScript tweaks the internal key to the BIP341 output key', () => {
+  const internal = '07'.repeat(32);
+  const script = p2trOutputKeyScript(internal);
+  // Structurally OP_1 <32-byte output key>.
+  assert.equal(script[0], 0x51);
+  assert.equal(script[1], 0x20);
+  assert.equal(script.length, 34);
+  // Regression guard: must NOT emit the RAW internal key (the old bug that made
+  // the signer-match check mismatch every legitimate receipt).
+  assert.notDeepEqual([...script.subarray(2)], [...Buffer.from(internal, 'hex')]);
+  // It must be the taproot-tweaked output key — same derivation as Wallet.
+  const expected = btc.p2tr(Buffer.from(internal, 'hex'), undefined, btc.TEST_NETWORK).script;
+  assert.deepEqual([...script], [...expected]);
 });
 
 test('settlement marker: OP_RETURN SFM1 + internal txid + vout', () => {

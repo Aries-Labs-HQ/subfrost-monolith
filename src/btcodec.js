@@ -70,7 +70,16 @@ export function dustThreshold(script) {
 export function p2trOutputKeyScript(xonlyPubkeyHex) {
   const key = Buffer.from(xonlyPubkeyHex, 'hex');
   if (key.length !== 32) throw new Error('x-only pubkey must be 32 bytes');
-  return Uint8Array.from([0x51, 0x20, ...key]);
+  // BIP341: the on-chain P2TR *output key* is the INTERNAL x-only key TWEAKED
+  // (key-path spend, empty script tree) — NOT the raw internal key. frBTC's
+  // get_signer(103) returns the INTERNAL key, and its receipt output is a
+  // key-path P2TR (tap_tweak with no merkle root), so we must apply the same
+  // tweak to reproduce the receipt's real scriptPubKey `OP_1 <tweaked key>`.
+  // Emitting `OP_1 <raw key>` here made the signer-match check mismatch on every
+  // legitimate receipt — harmless while warn-only, but REQUIRE_SIGNER_MATCH=true
+  // would then DEFER every receipt forever. btc.p2tr does the BIP341 tweak (same
+  // derivation as Wallet in wallet.js); the script is network-independent.
+  return btc.p2tr(key, undefined, SIGNET_NETWORK).script;
 }
 
 /** OP_RETURN audit marker: "SFM1" + receipt txid (internal order) + vout LE32. */
