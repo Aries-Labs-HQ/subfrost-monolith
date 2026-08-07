@@ -19,6 +19,8 @@ export class Metashrew {
     this.cfg = cfg;
     this.call = makeClient({
       url: cfg.metashrewUrl,
+      user: cfg.metashrewUser ?? null,
+      pass: cfg.metashrewPass ?? null,
       extraHeaders: cfg.subfrostApiKey ? { 'x-subfrost-api-key': cfg.subfrostApiKey } : {},
     });
   }

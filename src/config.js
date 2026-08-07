@@ -56,11 +56,29 @@ export function loadConfig({ env = process.env } = {}) {
     aliases: ['METASHREW_URL'],
   });
 
+  // FRONT_AUTH_FILE: path to an env-format file holding BASIC_USER/BASIC_PASS
+  // for a Basic-auth front (chain-front). Only the PATH lives in .env; the
+  // credential values stay in that 0600 file and are never copied here.
+  let frontUser = null;
+  let frontPass = null;
+  const frontAuthFile = get('FRONT_AUTH_FILE');
+  if (frontAuthFile) {
+    const auth = parseEnvFile(fs.readFileSync(frontAuthFile, 'utf8'));
+    if (!auth.BASIC_USER || !auth.BASIC_PASS) {
+      throw new Error(`FRONT_AUTH_FILE ${frontAuthFile}: BASIC_USER/BASIC_PASS missing`);
+    }
+    frontUser = auth.BASIC_USER;
+    frontPass = auth.BASIC_PASS;
+  }
+
   const cfg = {
     // endpoints
     metashrewUrl,
     // only attached when the read endpoint is a Subfrost host
     subfrostApiKey,
+    // Basic auth for the read endpoint (chain-front); null = no auth header
+    metashrewUser: frontUser,
+    metashrewPass: frontPass,
     bitcoindUrl: get('BITCOIND_URL') ?? 'http://127.0.0.1:38332',
     bitcoindUser: get('BITCOIND_USER') ?? 'bitcoinrpc',
     bitcoindPass: get('BITCOIND_PASS') ?? 'bitcoinrpc',
