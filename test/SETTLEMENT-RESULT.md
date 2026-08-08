@@ -34,7 +34,7 @@ its own (federation signing LIVE) or only when the monolith runs (federation OFF
 |---|---|---|---|
 | WRAP | `5e3e37f48ede07dab87c16e5a1166f3e586697c30a7916b27a9ec057fa2edf35` | 312058 | v0 50,000→signer `tb1p5lush…`; **v1 25,000→test wallet, carries 49,950 frBTC** |
 | UNWRAP(78) | `9f2bb52ecadb244d2e8e786877d1a767baff930144dfe9ebb50361796ed8ee7b` | 312067 | v1 payout→test wallet; **v2 546→signer `tb1p5lush…` = receipt outpoint**; v4 OP_RETURN runestone `[32,0,78,2,49950]` |
-| MONOLITH PAYOUT | `3de529a39b65539edbe12fb3c2147d8d9d25bf5aeb1b5cd596282e6b0b9f86b4` | mempool (accepted by local bitcoind, awaiting block) | v0 **49,950→`tb1pw3n…`**; v1 OP_RETURN `SFM1`+receipt; v2 949,435 change→`tb1pet2…` |
+| MONOLITH PAYOUT | `3de529a39b65539edbe12fb3c2147d8d9d25bf5aeb1b5cd596282e6b0b9f86b4` | **312074** (backfilled 2026-08-08, CAP1: confirmed, dual-source — our electrs AND Flex esplora agree on block `000000069d17cc31…5a23e8`; store `settle.confirmed` 2026-07-17 at 1481 confs) | v0 **49,950→`tb1pw3n…`**; v1 OP_RETURN `SFM1`+receipt; v2 949,435 change→`tb1pet2…` |
 
 - frBTC signer (live, `get_signer(103)` = x-only `7940ef3b…629dc`) P2TR = `tb1p5lush…`.
 - SFM1 marker (payout v1): `6a28 53464d31 7beed86e…2b9f 02000000` = "SFM1" + receipt txid
