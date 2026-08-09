@@ -1,22 +1,22 @@
 # subfrost-monolith
 
-**SIGNET-ONLY** unwrap-settlement signer for Subfrost frBTC — a deliberately
-**simplified, single-key replica** of the unwrap behavior of the Subfrost
+**SIGNET-ONLY** unwrap-settlement signer for SUBFROST frBTC — a deliberately
+**simplified, single-key replica** of the unwrap behavior of the SUBFROST
 federation (design source: Flex's `subzero-rs`). It exists so that frBTC
 unwraps settle on signet, where the real FROST federation is not running and
 signet frBTC is deterministic-credit-only (mints credit, but nothing releases
 BTC at redemption).
 
-> ## ⚠️ Not FROST. Not mainnet-safe. Signet/testnet only.
+> ## Not FROST. Not mainnet-safe. Signet/testnet only.
 >
-> The real Subfrost releases BTC via distributed threshold (FROST) signing —
+> The real SUBFROST releases BTC via distributed threshold (FROST) signing —
 > no single party can move funds. This monolith replaces that with **one
 > P2TR key on one machine**: a single point of custody and failure. That is
 > an acceptable trade-off for a signet demo and categorically unacceptable
 > for mainnet or any L0/real-value assets. The code hard-refuses to operate
 > when bitcoind reports any chain other than `signet`.
 
-Per Flex (Subfrost author): *"watch the metashrew_view unwrap function, match
+Per Flex (SUBFROST author): *"watch the metashrew_view unwrap function, match
 the receipt outpoints to an unwrap when you build the rollups... for a signet
 build it's fine."*
 
@@ -34,7 +34,7 @@ build it's fine."*
    an opcode-78 burn (`calldata [32, 0, 78, vout, amount]`); the indexer
    queues a `Payment { spendable, output, fulfilled }` for each one, where:
    - `spendable` — the **receipt outpoint**: the unwrap transaction's output
-     at `vout`, which pays the frBTC signer. In real Subfrost the federation
+     at `vout`, which pays the frBTC signer. In real SUBFROST the federation
      spends it when fulfilling; that spend is what marks the payment
      fulfilled on-chain.
    - `output` — the exact payout: consensus-encoded `TxOut` with the
@@ -96,6 +96,14 @@ Requires Node ≥ 20, a signet bitcoind (RPC on `127.0.0.1:38332`) and a signet
 metashrew/rockshrew index (`127.0.0.1:8080`). Defaults match that stack; see
 `.env.example` for every knob.
 
+The production posture runs from aries-chain against the sovereign
+`alkanes-chain` stack **through the authed JSON-RPC front** — Basic auth
+credentials are supplied by path via `FRONT_AUTH_FILE` (never inline). Stack
+facts and endpoint details live in alkanes-infra
+`signet/SIGNET-CROSSING-HANDOFF.md` (canonical); they are deliberately not
+duplicated here. A systemd unit is installed **run-on-demand** — kept
+stopped/disabled by ruling; settlement runs are operator-invoked.
+
 ```bash
 npm install
 node src/index.js init      # generates the signing key into .env (chmod 600)
@@ -126,12 +134,22 @@ decode, `get_signer` via the `simulate` view (signer pubkey
 `7940ef3b659179a1371dec05793cb027cde47806fb66ce1e3d1b69d56de629dc`), signet
 guard, wallet derivation/signing, full cycle execution with 0 pending.
 
-**Pending metashrew tip-sync** (local index is ~51k blocks behind signet tip
-at time of writing): the full end-to-end settlement of a *real* unwrap — the
-burn only becomes visible to the view once the index reaches it. The recipe
-is written up as a `test.todo` in `test/live.test.js`: fund the wallet, do an
-opcode-78 unwrap from the app, wait `MIN_CONFIRMATIONS`, run `once`, expect
-`1 paid`.
+**End-to-end settlement: PROVEN on signet, twice.**
+
+- **First proof** (federation-off test): with the monolith never running, a
+  real unwrap's receipt stayed unspent for the full watch window — the
+  federation settles nothing on signet. The monolith then settled it in
+  exactly one payout (`3de529a3…86b4`, confirmed @312074, dual-source
+  verified). Full evidence: [`test/SETTLEMENT-RESULT.md`](test/SETTLEMENT-RESULT.md).
+- **Sovereign re-proof (CAP1)**: full wrap→unwrap→settle with every read and
+  broadcast served by the sovereign stack through the authed front —
+  wrap `exchange(77)` `4d3fe88b…2640` @316810 (200,000 sats in, **199,800
+  frBTC credited** — 0.1% fee at wrap) → EOA unwrap(78) `be740c54…8028`
+  @316811 (payout amount 199,800 — **premium zero at unwrap**) → monolith
+  payout `f2d6df7f…5bd0` confirmed @316813 with the SFM1 marker, BIP341
+  tweaked-key signer match passing as a hard gate
+  (`REQUIRE_SIGNER_MATCH=true`). The idempotency re-run paid zero. Crossing
+  facts: alkanes-infra `signet/SIGNET-CROSSING-HANDOFF.md`.
 
 ## Protocol reference (as verified against alkanes-rs source + live signet)
 
@@ -144,3 +162,4 @@ opcode-78 unwrap from the app, wait `MIN_CONFIRMATIONS`, run `once`, expect
 | Receipt semantics | `Payment.spendable` = unwrap tx output at `vout`, pays the signer; spent-by-signer ⇒ fulfilled |
 | Payout semantics | `Payment.output` = TxOut{ burned sats, unwrap tx pointer-output script } |
 | Proto `txid` byte order | internal (reversed vs. RPC display order) |
+| Fee model (proven twice on-chain) | **0.1% taken at WRAP** (200,000 → 199,800 credited); **premium ZERO at unwrap** — supersedes any unwrap-premium claim |
